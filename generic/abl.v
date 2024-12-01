@@ -8,6 +8,7 @@
 module abl( 
     input clk,
     input rdy, 
+    input halt,
     input CI,               // carry input
     input cond,             // condition code input
     output reg CO,          // carry output
@@ -35,7 +36,7 @@ reg [7:0] AHL;
  * PC to the stack, and then fetches 2nd operand byte.
  */
 always @(posedge clk)
-    if( ld_ahl & rdy )
+    if( ld_ahl & rdy & ~halt )
         AHL <= DB;
 
 /*
@@ -89,7 +90,7 @@ always @(*)
     endcase
 
 always @(posedge clk)
-    if( rdy )
+    if( rdy & ~halt )
         ABL <= ADL;
 
 /*
@@ -100,7 +101,7 @@ wire [8:0] PCL1 = ABL + inc_pc;
 assign pcl_co = PCL1[8];
 
 always @(posedge clk)
-    if( ld_pc & rdy )
+    if( ld_pc & rdy & ~halt )
         PCL <= PCL1;
 
 endmodule

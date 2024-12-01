@@ -6,6 +6,7 @@
 module abh( 
     input clk,
     input rdy,
+    input halt,
     input CI,               // carry input from ABL module
     input [7:0] DB,         // Data Bus
     input [3:0] op,         // operation
@@ -60,14 +61,14 @@ always @(*)
  * register the new value
  */
 always @(posedge clk)
-    if( rdy )
+    if( rdy & ~halt )
         ABH <= ADH;
 
 /*
  * update Program Counter High
  */
 always @(posedge clk)
-    if( ld_pc & rdy )
+    if( ld_pc & rdy & ~halt )
         PCH <= ABH + inc_pc;
 
 endmodule

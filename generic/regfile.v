@@ -6,6 +6,7 @@
 module regfile(
     input clk,
     input rdy,
+    input halt,
     input [6:0] op,
     input [7:0] DI,
     output [7:0] DO );
@@ -43,7 +44,7 @@ wire we = op[6];
  * registers always comes from the ALU output.
  */
 always @(posedge clk)
-    if( we & rdy )
+    if( we & rdy & ~halt )
         regs[reg_wr] <= DI;
 
 endmodule

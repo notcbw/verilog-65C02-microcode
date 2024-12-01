@@ -63,6 +63,7 @@ wire mask_irq;                          // indicates whether IRQs are masked
 /*
  * Flags and flag updates
  */
+wire halt;
 wire [9:0] flag_op;                     // flag operation select bits
 wire cond;                              // condition code
 wire B;                                 // BRK flag
@@ -82,9 +83,11 @@ wire [7:0] R;                           // register file output for selected reg
 regfile regfile(
     .clk(clk),
     .rdy(RDY),
+    .halt(halt),
     .op(reg_op),
     .DI(alu_out),
-    .DO(R) );
+    .DO(R)
+);
 
 /*
  * ABL (Address Bus Low) logic
@@ -92,6 +95,7 @@ regfile regfile(
 abl abl(
     .clk(clk),                          //
     .rdy(RDY),                          //
+    .halt(halt),
     .CI(abl_ci),                        // carry in 
     .CO(abl_co),                        // carry from low -> high byte 
     .cond(cond),                        // condition status for branches
@@ -112,6 +116,7 @@ abl abl(
 abh abh(
     .clk(clk),                          //
     .rdy(RDY),                          //
+    .halt(halt),
     .CI(abh_ci),                        // carry in from ABL
     .op(abh_op) ,                       // ABH operation
     .ld_pc(ld_pc),                      // signal to load PC
@@ -138,6 +143,7 @@ always @(*)
  */
 alu alu(
     .clk(clk),
+    .halt(halt),
     .rdy(RDY),
     .sync(sync),
     .DB(DB),
@@ -148,7 +154,8 @@ alu alu(
     .mask_irq(mask_irq),
     .flag_op(flag_op),
     .cond(cond),
-    .OUT(alu_out) );
+    .OUT(alu_out)
+);
 
 /*
  * Control. Generates all control signals.
@@ -170,7 +177,9 @@ ctl ctl(
     .D(D),
     .B(B),
     .WE(WE),
-    .DB(DB) );
+    .DB(DB),
+    .halt(halt)
+);
 
 /*
  * mnemonic opcode name

@@ -10,6 +10,7 @@
  */
 module alu( 
     input clk,              // clk
+    input halt,             // cpu halt input
     input rdy,              // RDY input
     input sync,             // opcode sync
     input [7:0] R,          // input from register file
@@ -45,7 +46,7 @@ wire SBC = op[4];
 reg bcd_carry;
 
 always @(posedge clk)
-    if( rdy )
+if( rdy & ~halt )
         bcd_carry <= !sync & adj_m;
 
 /*
@@ -177,14 +178,14 @@ wire l = adjl;
 wire h = adjh;
 
 always @(posedge clk)
-    if( ld_m & rdy )
+    if( ld_m & rdy & ~halt )
         M <= DB;
 
 /*
  * BI (B Input of the ALU) register update
  */
 always @(posedge clk)
-    if( ld_m & rdy )
+    if( ld_m & rdy & ~halt )
         BI <= adj_m ? {1'b0, h, h, 2'b0, l, l, 1'b0 } : DB;
 
 /*
@@ -200,11 +201,11 @@ wire plp = flag_op[2];
  */
 
 always @(posedge clk)
-    if( rdy )
+    if( rdy & ~halt )
         CO1 <= CO;
 
 always @(posedge clk)
-    if( sync & rdy )
+    if( sync & rdy & ~halt )
         if( flag_op[1] )
             if( bcd_carry )
                 C <= (CO & !SBC) | CO1;  
@@ -222,7 +223,7 @@ always @(posedge clk)
  * 11 - N/Z <= alu_out
  */
 always @(posedge clk)
-    if( sync & rdy )
+    if( sync & rdy & ~halt )
         casez( flag_op[4:3] )
             2'b01 : N <= M[7];          // BIT (bit 7) 
             2'b10 : N <= M[7];          // PLP
@@ -233,7 +234,7 @@ always @(posedge clk)
  * update Z(ero) flag
  */
 always @(posedge clk)
-    if( sync & rdy )
+    if( sync & rdy & ~halt )
         casez( {flag_op[9], flag_op[2]} )
             2'b01 : Z <= M[1];          // PLP
             2'b10 : Z <= z0 & z1;       // ALU == 0 
@@ -244,7 +245,7 @@ always @(posedge clk)
  *
  */
 always @(posedge clk)
-    if( sync & rdy )
+    if( sync & rdy & ~halt )
         case( flag_op[8:7] )
             2'b01 : V <= BC7 ^ BC8;     // ALU overflow 
             2'b11 : V <= M[6];          // BIT/PLP
@@ -280,11 +281,11 @@ always @(*) begin
 end
 
 always @(posedge clk)
-    if( rdy )
+    if( rdy & ~halt )
         I <= next_I;
 
 always @(posedge clk)
-    if( sync & rdy )
+    if( sync & rdy & ~halt )
         casez( {plp, flag_op[6:5]} )
             3'b010 : D <= M[5];         // CLD/SED 
             3'b011 : D <= 0;            // clear D in BRK

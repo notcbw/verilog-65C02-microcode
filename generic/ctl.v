@@ -49,11 +49,12 @@ module ctl(
     output [8:0] alu_op,                // operation select for ALU 
     output [6:0] reg_op,                // operation select for register file
     output [1:0] do_op,                 // operation select for data bus output
-    output ld_m,                        // load enable for M register
     input I,                            // IRQ enable flag
     input D,                            // Decimal flag 
     output B,                           // BRK flag
-    output reg [11:0] ab_op );          // operation select for address bus output 
+    output reg [11:0] ab_op,            // operation select for address bus output 
+    output halt                         // cpu halt signal
+);
 
 /*
  * 'control' is a 32 bit vector from the microcode memory
@@ -74,7 +75,7 @@ reg [4:0] finish;                       // address of finishing code for current
 
 microcode rom(
     .clk(clk),
-    .enable(rdy),
+    .enable(rdy & ~halt),
     .reset(reset),
     .addr(pc),
     .data(control) );
@@ -165,7 +166,7 @@ always @(*)
  * bit 28 contains WE signal for next cycle
  */
 always @(posedge clk)
-    if( rdy )
+    if( rdy & ~halt )
         WE <= control[28];
 
 /*
@@ -173,7 +174,7 @@ always @(posedge clk)
  * so the same bits are used to store location of finisher code
  */
 always @(posedge clk)
-    if( rdy & control[23] )
+    if( rdy & control[23] & ~halt )
         finish <= control[14:10];
 
 /*
@@ -248,5 +249,26 @@ always @(*)
         4'b1111:                ab_op = { 7'b000_0011, abl_sel, 2'b00, abl_ci };  // {FF, REG} + 1
         default:                ab_op = { 7'bxxx_xxxx, abl_sel, 2'bxx, abl_ci };  // avoid latches
     endcase
+
+/*
+ * stop and wait flags to support stp and wai instruction
+ */
+reg stp = 0;
+reg wai = 0;
+
+assign halt = stp | wai;
+
+always @( posedge clk )
+    if (reset) begin
+        stp <= 0;
+        wai <= 0;
+    end else if (take_nmi | take_irq) begin
+        wai <= 0;
+    end else if (sel_pc == 2'b00) begin
+        case (DB)
+            'hcb:   wai <= 1;
+            'hdb:   stp <= 1;
+        endcase
+    end
 
 endmodule
